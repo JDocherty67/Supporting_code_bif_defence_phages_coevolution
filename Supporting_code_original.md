@@ -3192,7 +3192,7 @@ if current_contig_file:
 print("Individual .fna files created for each contig.")
 ```
 
-### The prophage database is now complete and ready for downstream analysis!
+### Please refer to 'Prophages_QC_Structural_Proteins.md' for further information regarding phage QC checks.
 
 # 08 | Characterisation of prophages
 
