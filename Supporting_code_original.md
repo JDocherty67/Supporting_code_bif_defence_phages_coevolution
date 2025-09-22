@@ -3065,6 +3065,94 @@ for index, row in df.iterrows():
 
 ```
 
+Script 8 - Check Pharokka output for the presence of at least four structural proteins, comprising ≥10% of CDS.
+
+```python
+"""
+Scan every *_all_cds_functions.tsv under a directory,
+and for each file report whether the structural CDS categories
+(connector, head and packaging, tail) sum to ≥4 and make up
+≥10% of the total CDS count.
+Also, at the end, list all files that did not meet both criteria.
+"""
+
+import os
+import csv
+import argparse
+
+# Thresholds
+MIN_STRUCTURAL_COUNT = 4
+MIN_STRUCTURAL_FRACTION = 0.10  # 10%
+
+# Define which rows count as "structural"
+STRUCTURAL_CATEGORIES = {
+    "connector",
+    "head and packaging",
+    "tail"
+}
+
+def analyze_file(path):
+    total_cds = None
+    structural_sum = 0
+
+    with open(path, newline='') as tsvfile:
+        reader = csv.DictReader(tsvfile, delimiter="\t")
+        for row in reader:
+            desc  = row["Description"].strip().lower()
+            count = int(row["Count"])
+            if desc == "cds":
+                total_cds = count
+            elif desc in STRUCTURAL_CATEGORIES:
+                structural_sum += count
+
+    if total_cds is None:
+        raise ValueError(f"No 'CDS' row found in {path!r}")
+
+    meets_min_count = (structural_sum >= MIN_STRUCTURAL_COUNT)
+    meets_min_fraction = (structural_sum >= MIN_STRUCTURAL_FRACTION * total_cds)
+
+    return total_cds, structural_sum, meets_min_count, meets_min_fraction
+
+
+def main(root_dir):
+    non_compliant = []
+    for dirpath, _, files in os.walk(root_dir):
+        for fname in files:
+            if fname.endswith("_all_cds_functions.tsv"):
+                fullpath = os.path.join(dirpath, fname)
+                total, struct_sum, ok_count, ok_frac = analyze_file(fullpath)
+
+                print(f"File: {fullpath}")
+                print(f"  Total CDS                  : {total}")
+                print(f"  Structural CDS total       : {struct_sum}")
+                print(f"  ≥ {MIN_STRUCTURAL_COUNT} structural?        : {'Yes' if ok_count else 'No'}")
+                print(f"  ≥ {int(MIN_STRUCTURAL_FRACTION*100)}% of total?         : {'Yes' if ok_frac else 'No'}")
+                print()
+
+                if not (ok_count and ok_frac):
+                    non_compliant.append(fullpath)
+
+    if non_compliant:
+        print("Files that did not meet criteria:")
+        for path in non_compliant:
+            print(f"  {path}")
+    else:
+        print("All files met the criteria.")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Check structural CDS proportions in TSV files"
+    )
+    parser.add_argument(
+        "directory",
+        help="Root directory to recurse into"
+    )
+    args = parser.parse_args()
+    main(args.directory)
+
+```
+
 ### Step 4 | Dereplicate phages at MIUViG recommended parameters (95% ANI + 85% AF) using supporting code from CheckV ([https://bitbucket.org/berkeleylab/checkv/src/master/](https://bitbucket.org/berkeleylab/checkv/src/master/)).
 
 Script 1 - Create a blast+ database.
@@ -3192,7 +3280,7 @@ if current_contig_file:
 print("Individual .fna files created for each contig.")
 ```
 
-### Please refer to 'Prophages_QC_Structural_Proteins.md' for further information regarding phage QC checks.
+### The prophage database is now complete and ready for downstream analysis!
 
 # 08 | Characterisation of prophages
 
